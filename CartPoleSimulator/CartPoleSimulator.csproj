@@ -37,7 +37,7 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Rafka.MathLib">
-      <HintPath>..\..\RafkaCSharpLibrary\MyLibTest\bin\Release\Rafka.MathLib.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\..\lib\Rafka.MathLib.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Net" />

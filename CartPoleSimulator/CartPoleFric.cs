@@ -8,8 +8,8 @@ namespace CartPoleSimulator {
         private const double mp = 150.0 + 54.0;
         private const double g = 9.80665;
         public const double l = 0.0745;
-		private const double muc = 0.0;
-		private const double mup = 0.0;
+		private const double muc = 0.53;
+		private const double mup = 0.4;
 
         private const double div43 = 4.0 / 3.0;
         private const double mc_mp = mc + mp;
@@ -25,6 +25,7 @@ namespace CartPoleSimulator {
 			x0 = new Vector(0.0, 0.0, 0.0, 0.0, (mc + mp) * g);
             ts = 0.0;
             te = 1.0;
+            F = 0.0;
 		}
 
 		private double theta_2nd(double nc, double v, double theta, double theta_v) {
