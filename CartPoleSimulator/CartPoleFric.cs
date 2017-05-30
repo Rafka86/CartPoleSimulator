@@ -8,7 +8,7 @@ namespace CartPoleSimulator {
 		private const double mp = 150.0 + 54.0;
 		private const double g = 9.80665;
 		public const double l = 0.0745;
-		private const double muc = 0.0;//0.53;
+		private const double muc = 0.1;//0.53;
 		private const double mup = 2.0;//0.4;
 
 		private const double div43 = 4.0 / 3.0;

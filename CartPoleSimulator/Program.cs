@@ -173,9 +173,9 @@ namespace CartPoleSimulator {
 
 			gp.Start();
 			gp.StandardInput.WriteLine("set size square");
-			gp.SetXRange(-1.0, 1.0);
+			gp.SetXRange(-0.1, 0.1);
 			gp.SetXLabel();
-			gp.SetYRange(0.0, 2.0);
+			gp.SetYRange(0.0, 0.2);
 
 			var sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 			var point = new IPEndPoint(IPAddress.Any, port);
@@ -201,7 +201,7 @@ namespace CartPoleSimulator {
 					cp.UpdateFriction(x);
 					Error.WriteLine(x);
 					var pos = new Vector2(x[0], 0.0);
-					var p_g = new Vector2(0.0, CartPoleFric.l * 12.0);
+					var p_g = new Vector2(0.0, CartPoleFric.l);
 					p_g *= Matrix.RotationMatrix2D(x[2]);
 					p_g += pos;
 					gp.SetXLabelName("trial = " + t);
