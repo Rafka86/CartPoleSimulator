@@ -84,6 +84,7 @@ namespace CartPoleSimulator
         private static AsyncStateObject StartReceive(Socket soc)
         {
             var so = new AsyncStateObject(soc);
+            cerror = false;
             soc.BeginReceive(so.ReceiveBuffer,
                     0,
                     so.ReceiveBuffer.Length,
@@ -93,6 +94,7 @@ namespace CartPoleSimulator
             return so;
         }
 
+        static bool cerror;
         private static void ReceiveDataCallback(IAsyncResult ar)
         {
             var so = (AsyncStateObject)ar.AsyncState;
@@ -103,12 +105,16 @@ namespace CartPoleSimulator
             }
             catch (ObjectDisposedException) {
                 Error.WriteLine("Closed.");
+                cerror = true;
+                repeat = false;
                 return;
             }
 
             if (len <= 0) {
                 Error.WriteLine("Disconnected.");
                 so.Socket.Close();
+                cerror = true;
+                repeat = false;
                 return;
             }
 
@@ -220,7 +226,7 @@ namespace CartPoleSimulator
                 }
 
                 turnover = true;
-                while (turnover) ;
+                while (turnover && !cerror) ;
 
                 WriteLine((repeat) ? "Retry." : "Finish.");
             }
