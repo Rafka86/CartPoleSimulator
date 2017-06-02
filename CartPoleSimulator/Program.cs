@@ -130,13 +130,13 @@ namespace CartPoleSimulator
                             if (!turnover) {
                                 Buffer.BlockCopy(BitConverter.GetBytes(p.command), 0, so.ReceiveBuffer, 0, 8);
                                 for (int i = 0; i < p.data.Length; i++)
-                                    Buffer.BlockCopy(BitConverter.GetBytes(x[i]), 0, so.ReceiveBuffer, 8 * (i + 1), 8);
+                                    Buffer.BlockCopy(BitConverter.GetBytes(-x[i]), 0, so.ReceiveBuffer, 8 * (i + 1), 8);
                                 if (so.Socket.Send(so.ReceiveBuffer, 40, SocketFlags.None) <= 0)
                                     Error.WriteLine("Sending Error.");
                             } else {
                                 Buffer.BlockCopy(BitConverter.GetBytes((long)Command.RST), 0, so.ReceiveBuffer, 0, 8);
                                 for (int i = 0; i < p.data.Length; i++)
-                                    Buffer.BlockCopy(BitConverter.GetBytes(x[i]), 0, so.ReceiveBuffer, 8 * (i + 1), 8);
+                                    Buffer.BlockCopy(BitConverter.GetBytes(-x[i]), 0, so.ReceiveBuffer, 8 * (i + 1), 8);
                                 if (so.Socket.Send(so.ReceiveBuffer, 40, SocketFlags.None) <= 0)
                                     Error.WriteLine("Sending Error.");
                             }
