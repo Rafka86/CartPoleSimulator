@@ -4,8 +4,8 @@ using Rafka.MathLib.Real.Numerics;
 
 namespace CartPoleSimulator {
 	public class CartPole : ODE {
-		private const double mc = 2.0;
-		private const double mp = 150.0 + 54.0;
+		private const double mc = 0.002;
+		private const double mp = 0.150 + 0.054;
 		private const double g = 9.80665;
 		public const double l = 0.0745;
 
