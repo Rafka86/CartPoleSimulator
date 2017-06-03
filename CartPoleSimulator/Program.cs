@@ -59,10 +59,10 @@ namespace CartPoleSimulator {
 			}
 		}
 
-		static bool turnover, repeat;
+		static bool turnover, repeat, cerror;
 		static CartPole cp;
 		static Vector x;
-		const double power = 5000.0;
+		static int count_f;
 
 		private class AsyncStateObject {
 			public Socket Socket;
@@ -88,18 +88,21 @@ namespace CartPoleSimulator {
 		private static void ReceiveDataCallback(IAsyncResult ar) {
 			var so = (AsyncStateObject)ar.AsyncState;
 
+			cerror = false;
 			var len = 0;
 			try {
 				len = so.Socket.EndReceive(ar);
 			}
 			catch (ObjectDisposedException) {
 				Error.WriteLine("Closed.");
+				cerror = true;
 				return;
 			}
 
 			if (len <= 0) {
 				Error.WriteLine("Disconnected.");
 				so.Socket.Close();
+				cerror = true;
 				return;
 			}
 
@@ -131,6 +134,7 @@ namespace CartPoleSimulator {
 							Error.WriteLine("Command : MOV");
 							var pow = BitConverter.ToDouble(so.ReceiveBuffer, 8);
 							cp.F = -pow;
+							count_f = 0;
 							Error.WriteLine("Move power : " + cp.F);
 						}
 						break;
@@ -195,23 +199,29 @@ namespace CartPoleSimulator {
 			while (repeat) {
 
 				t += 1;
+				gp.SetXLabelName("trial = " + t);
+
 				cp.Init();
 				x = cp.x0;
+
 				var count = 0;
-				while (CheckState(x)) {
+				count_f = 0;
+				while (CheckState(x) && !cerror) {
 					x = ODESolver.rk4Step(cp, 0.0, x);
+
 					var pos = new Vector2(x[0], 0.0);
 					var p_g = new Vector2(0.0, CartPoleFric.l);
 					p_g *= Matrix.RotationMatrix2D(x[2]);
 					p_g += pos;
-					gp.SetXLabelName("trial = " + t);
+
+					if (count_f++ == 1000) cp.F = 0.0;
+
 					if (count++ % 10 == 0) {
-						cp.F = 0.0;
 						gp.PlotLines(pos, p_g);
 					}
 				}
 
-				turnover = true;
+				if (!cerror) turnover = true;
 				while (turnover) ;
 
 				WriteLine((repeat) ? "Retry." : "Finish.");
