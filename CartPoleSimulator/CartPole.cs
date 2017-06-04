@@ -23,6 +23,7 @@ namespace CartPoleSimulator {
 			x0 = new Vector(0.0, 0.0, 0.0, 0.0);
 			ts = 0.0;
 			te = 1.0;
+			F = 0.0;
 		}
 
 		private double theta_2nd(double v, double theta, double theta_v) {
