@@ -64,11 +64,17 @@ namespace CartPoleSimulator {
 		}
 
 		public void Close() {
+			if (client != null) Disconnect();
 			server.Close();
+		}
+
+		private void BufferClear() {
+			while (client.Available != 0) client.Receive(recvBuf, size, SocketFlags.None);
 		}
 
 		public void Start() {
 			if (client == null) throw new ArgumentException("Connection has not been established.");
+			BufferClear();
 			client.BeginReceive(recvBuf, 0, size, SocketFlags.None, new AsyncCallback(ReceiveCallBack), recvBuf);
 			Error.WriteLine("Start Receiving.");
 		}
@@ -134,7 +140,11 @@ namespace CartPoleSimulator {
 							Error.WriteLine("Command : RST");
 
 							if (!TurnOver) reset = true;
-							else TurnOver = false;
+							else {
+								Repeat = true;
+								TurnOver = false;
+								return;
+							}
 						}
 						break;
 					case Command.STP: {
@@ -144,6 +154,7 @@ namespace CartPoleSimulator {
 							else {
 								Repeat = false;
 								TurnOver = false;
+								return;
 							}
 						}
 						break;

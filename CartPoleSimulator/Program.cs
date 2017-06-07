@@ -55,7 +55,6 @@ namespace CartPoleSimulator {
 			gp.SetYRange(0.0, 0.2);
 
 			cs.WaitClient();
-			cs.Start();
 
 			ODESolver.dt = 1e-5;
 			var t = 0;
@@ -69,6 +68,7 @@ namespace CartPoleSimulator {
 				var center = 0.0;
 
 				var count = 0;
+				cs.Start();
 				while (!cs.TurnOver && !cs.ResetRequest) {
 					cs.UpdateCartInfo(ODESolver.rk4Step(cp, 0.0, cs.x));
 
@@ -91,7 +91,6 @@ namespace CartPoleSimulator {
 				WriteLine((cs.Repeat) ? "Retry." : "Finish.");
 			}
 
-			cs.Disconnect();
 			cs.Close();
 			gp.Close();
 		}
