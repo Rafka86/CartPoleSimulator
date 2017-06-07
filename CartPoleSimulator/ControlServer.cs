@@ -15,6 +15,7 @@ namespace CartPoleSimulator {
 
 	struct Packet {
 		public Command command;
+		public int time_stamp;
 		public double[] data;
 	}
 
@@ -27,8 +28,8 @@ namespace CartPoleSimulator {
 		Socket server, client;
 
 		CartPole cp;
-		public Vector x { get; private set; }
-		int count_F;
+		private Vector x;
+		int count_F, time_stamp;
 		const int size = 1024;
 		byte[] recvBuf, sendBuf;
 
@@ -61,6 +62,7 @@ namespace CartPoleSimulator {
 			client.Close();
 			Error.WriteLine("Disconnected.");
 			client = null;
+			cerror = true;
 		}
 
 		public void Close() {
@@ -79,6 +81,11 @@ namespace CartPoleSimulator {
 			Error.WriteLine("Start Receiving.");
 		}
 
+		public void SyncStart() {
+			client.Receive(recvBuf, size, SocketFlags.None);
+			SyncProcedure();
+		}
+
 		private void ReceiveCallBack(IAsyncResult ar) {
 			cerror = false;
 
@@ -94,7 +101,7 @@ namespace CartPoleSimulator {
 			}
 
 			if (len <= 0) {
-				Disconnect();
+				if (client != null) Disconnect();
 				Repeat = false;
 				return;
 			}
@@ -104,10 +111,76 @@ namespace CartPoleSimulator {
 			Error.WriteLine("Start Receiving.");
 		}
 
+		private void SyncProcedure() {
+			var p = new Packet() {
+				command = (Command)BitConverter.ToInt32(recvBuf, 0),
+				time_stamp = BitConverter.ToInt32(recvBuf, 4),
+				data = new double[4]
+			};
+
+			switch (p.command) {
+				case Command.GET: {
+						Error.WriteLine("Command : GET");
+
+						if (!TurnOver) {
+							Buffer.BlockCopy(BitConverter.GetBytes((int)p.command), 0, sendBuf, 0, 4);
+							Buffer.BlockCopy(BitConverter.GetBytes(time_stamp), 0, sendBuf, 4, 4);
+							for (int i = 0; i < p.data.Length; i++)
+								Buffer.BlockCopy(BitConverter.GetBytes(-x[i]), 0, sendBuf, 8 * (i + 1), 8);
+							client.Send(sendBuf, 40, SocketFlags.None);
+						} else {
+							Buffer.BlockCopy(BitConverter.GetBytes((int)Command.RST), 0, sendBuf, 0, 4);
+							Buffer.BlockCopy(BitConverter.GetBytes(time_stamp), 0, sendBuf, 4, 4);
+							for (int i = 0; i < p.data.Length; i++)
+								Buffer.BlockCopy(BitConverter.GetBytes(-x[i]), 0, sendBuf, 8 * (i + 1), 8);
+							client.Send(sendBuf, 40, SocketFlags.None);
+						}
+					}
+					break;
+				case Command.MOV: {
+						Error.WriteLine("Command : MOV");
+
+						var pow = BitConverter.ToDouble(recvBuf, 8);
+						cp.F = -pow;
+						count_F = 0;
+					}
+					break;
+				case Command.RST: {
+						Error.WriteLine("Command : RST");
+
+						if (!TurnOver) reset = true;
+						else {
+							Repeat = true;
+							TurnOver = false;
+							return;
+						}
+					}
+					break;
+				case Command.STP: {
+						Error.WriteLine("Command : STP");
+
+						if (!TurnOver) cp.F = 0.0;
+						else {
+							Repeat = false;
+							TurnOver = true;
+							return;
+						}
+					}
+					break;
+				default: {
+						Error.WriteLine("Undefined Command.");
+
+						cerror = true;
+					}
+					return;
+			}
+		}
+
 		private void Procedure() {
 			if (client.Available == 0) {
 				var p = new Packet() {
-					command = (Command)BitConverter.ToInt64(recvBuf, 0),
+					command = (Command)BitConverter.ToInt32(recvBuf, 0),
+					time_stamp = BitConverter.ToInt32(recvBuf, 4),
 					data = new double[4]
 				};
 
@@ -116,12 +189,14 @@ namespace CartPoleSimulator {
 							Error.WriteLine("Command : GET");
 
 							if (!TurnOver) {
-								Buffer.BlockCopy(BitConverter.GetBytes((long)p.command), 0, sendBuf, 0, 8);
+								Buffer.BlockCopy(BitConverter.GetBytes((int)p.command), 0, sendBuf, 0, 4);
+								Buffer.BlockCopy(BitConverter.GetBytes(time_stamp), 0, sendBuf, 4, 4);
 								for (int i = 0; i < p.data.Length; i++)
 									Buffer.BlockCopy(BitConverter.GetBytes(-x[i]), 0, sendBuf, 8 * (i + 1), 8);
 								client.BeginSend(sendBuf, 0, 40, SocketFlags.None, new AsyncCallback(SendCallBack), sendBuf);
 							} else {
-								Buffer.BlockCopy(BitConverter.GetBytes((long)Command.RST), 0, sendBuf, 0, 8);
+								Buffer.BlockCopy(BitConverter.GetBytes((int)Command.RST), 0, sendBuf, 0, 4);
+								Buffer.BlockCopy(BitConverter.GetBytes(time_stamp), 0, sendBuf, 4, 4);
 								for (int i = 0; i < p.data.Length; i++)
 									Buffer.BlockCopy(BitConverter.GetBytes(-x[i]), 0, sendBuf, 8 * (i + 1), 8);
 								client.BeginSend(sendBuf, 0, 40, SocketFlags.None, new AsyncCallback(SendCallBack), sendBuf);
@@ -189,14 +264,21 @@ namespace CartPoleSimulator {
 			reset = false;
 		}
 
-		const double deg_45 = PI / 4.0;
+		const double lim_deg = 45.0 * PI / 180.0;
+		const double lim_dst = 1000.0;						//mm
 		private bool CheckState() {
-			return -deg_45 < x[2] && x[2] < deg_45 && -1.0 < x[0] && x[0] < 1.0;
+			return -lim_deg < x[2] && x[2] < lim_deg && -lim_dst < x[0] && x[0] < lim_dst;
 		}
 
-		public void UpdateCartInfo(Vector x) {
-			this.x = x;
-			if (count_F++ == 10000) cp.F = 0.0;
+		public void CartPoleUpdateF() {
+			if (count_F++ == 100) cp.F = 0.0;
+		}
+
+		public void UpdateCartInfo(int time, Vector x) {
+			time_stamp = time;
+			this.x = x.Clone;
+			this.x[0] *= 1000;	//m->mm
+			this.x[1] *= 1000;	//m/s->mm/s
 			if (!ResetRequest) TurnOver = !CheckState();
 		}
 	}

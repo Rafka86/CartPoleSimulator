@@ -47,6 +47,7 @@ namespace CartPoleSimulator {
 			var gp = new Gnuplot(@"G:\Applications\gnuplot\bin\gnuplot.exe");
 			var cp = new CartPole();
 			var cs = new ControlServer(cp);
+			var x  = cp.x0;
 
 			gp.Start();
 			gp.StandardInput.WriteLine("set size square");
@@ -55,8 +56,9 @@ namespace CartPoleSimulator {
 			gp.SetYRange(0.0, 0.2);
 
 			cs.WaitClient();
+			cs.Start();
 
-			ODESolver.dt = 1e-5;
+			ODESolver.dt = 1e-3;
 			var t = 0;
 			while (cs.Repeat) {
 				t += 1;
@@ -64,28 +66,34 @@ namespace CartPoleSimulator {
 				cs.Reseted();
 
 				cp.Init();
-				cs.UpdateCartInfo(cp.x0);
-				var center = 0.0;
+				x = cp.x0;
+				cs.UpdateCartInfo(0, cp.x0);
+				//var center = 0.0;
 
 				var count = 0;
-				cs.Start();
+				//cs.Start();
 				while (!cs.TurnOver && !cs.ResetRequest) {
-					cs.UpdateCartInfo(ODESolver.rk4Step(cp, 0.0, cs.x));
+					x = ODESolver.rk4Step(cp, 0.0, x);
+					cs.CartPoleUpdateF();
+					if (++count % 100 == 0) {
+						cs.UpdateCartInfo(count, x);
+						//cs.SyncStart();	//get		//WFULL 同期用
+						//cs.SyncStart();	//mov,rst	//WFULL 同期用
+					}
 
-					var pos = new Vector2(cs.x[0], 0.0);
-					var p_g = new Vector2(0.0, CartPoleFric.l);
-					p_g *= Matrix.RotationMatrix2D(cs.x[2]);
+					var pos = new Vector2(x[0], 0.0);
+					var p_g = new Vector2(0.0, CartPole.l);
+					p_g *= Matrix.RotationMatrix2D(x[2]);
 					p_g += pos;
-					if (count++ % 10 == 0) {
+					if (count % 10 == 0) {
 						gp.SetXLabelName("time = " + (count * ODESolver.dt) + " s");
-						if (count % 1000 == 0) {
-							center += 0.5 * (cs.x[0] - center);
-							gp.SetXRange(center - 0.1, center + 0.1);
-						}
+						//center += x[1] * ODESolver.dt;
+						//gp.SetXRange(center - 0.1, center + 0.1);
 						gp.PlotLines(pos, p_g);
 					}
 				}
 
+				//cs.SyncStart();	//同期用
 				while (cs.TurnOver) ;
 
 				WriteLine((cs.Repeat) ? "Retry." : "Finish.");
