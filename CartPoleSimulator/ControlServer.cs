@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 using Rafka.MathLib.Real;
+using Rafka.MathLib.Real.Numerics;
 using static System.Console;
 using static System.Math;
 
@@ -29,7 +30,8 @@ namespace CartPoleSimulator {
 
 		CartPole cp;
 		private Vector x;
-		int count_F, time_stamp;
+		int count_F, count;
+		double time_stamp;
 		const int size = 1024;
 		byte[] recvBuf, sendBuf;
 
@@ -127,12 +129,14 @@ namespace CartPoleSimulator {
 							Buffer.BlockCopy(BitConverter.GetBytes(time_stamp), 0, sendBuf, 4, 4);
 							for (int i = 0; i < p.data.Length; i++)
 								Buffer.BlockCopy(BitConverter.GetBytes(-x[i]), 0, sendBuf, 8 * (i + 1), 8);
+							Buffer.BlockCopy(BitConverter.GetBytes(time_stamp), 0, sendBuf, 40, 8);
 							client.Send(sendBuf, 40, SocketFlags.None);
 						} else {
 							Buffer.BlockCopy(BitConverter.GetBytes((int)Command.RST), 0, sendBuf, 0, 4);
 							Buffer.BlockCopy(BitConverter.GetBytes(time_stamp), 0, sendBuf, 4, 4);
 							for (int i = 0; i < p.data.Length; i++)
 								Buffer.BlockCopy(BitConverter.GetBytes(-x[i]), 0, sendBuf, 8 * (i + 1), 8);
+							Buffer.BlockCopy(BitConverter.GetBytes(time_stamp), 0, sendBuf, 40, 8);
 							client.Send(sendBuf, 40, SocketFlags.None);
 						}
 					}
@@ -188,18 +192,21 @@ namespace CartPoleSimulator {
 					case Command.GET: {
 							Error.WriteLine("Command : GET");
 
+							while (reset) ;
 							if (!TurnOver) {
 								Buffer.BlockCopy(BitConverter.GetBytes((int)p.command), 0, sendBuf, 0, 4);
-								Buffer.BlockCopy(BitConverter.GetBytes(time_stamp), 0, sendBuf, 4, 4);
+								Buffer.BlockCopy(BitConverter.GetBytes(count), 0, sendBuf, 4, 4);
 								for (int i = 0; i < p.data.Length; i++)
 									Buffer.BlockCopy(BitConverter.GetBytes(-x[i]), 0, sendBuf, 8 * (i + 1), 8);
-								client.BeginSend(sendBuf, 0, 40, SocketFlags.None, new AsyncCallback(SendCallBack), sendBuf);
+								Buffer.BlockCopy(BitConverter.GetBytes(time_stamp), 0, sendBuf, 40, 8);
+								client.BeginSend(sendBuf, 0, 48, SocketFlags.None, new AsyncCallback(SendCallBack), sendBuf);
 							} else {
 								Buffer.BlockCopy(BitConverter.GetBytes((int)Command.RST), 0, sendBuf, 0, 4);
-								Buffer.BlockCopy(BitConverter.GetBytes(time_stamp), 0, sendBuf, 4, 4);
+								Buffer.BlockCopy(BitConverter.GetBytes(count), 0, sendBuf, 4, 4);
 								for (int i = 0; i < p.data.Length; i++)
 									Buffer.BlockCopy(BitConverter.GetBytes(-x[i]), 0, sendBuf, 8 * (i + 1), 8);
-								client.BeginSend(sendBuf, 0, 40, SocketFlags.None, new AsyncCallback(SendCallBack), sendBuf);
+								Buffer.BlockCopy(BitConverter.GetBytes(time_stamp), 0, sendBuf, 40, 8);
+								client.BeginSend(sendBuf, 0, 48, SocketFlags.None, new AsyncCallback(SendCallBack), sendBuf);
 							}
 						}
 						break;
@@ -266,20 +273,21 @@ namespace CartPoleSimulator {
 
 		const double lim_deg = 45.0 * PI / 180.0;
 		const double lim_dst = 1000.0;						//mm
-		private bool CheckState() {
-			return -lim_deg < x[2] && x[2] < lim_deg && -lim_dst < x[0] && x[0] < lim_dst;
+		public void CheckState(Vector x) {
+			TurnOver = !(-lim_deg < x[2] && x[2] < lim_deg && -lim_dst < x[0] && x[0] < lim_dst);
 		}
 
 		public void CartPoleUpdateF() {
-			if (count_F++ == 100) cp.F = 0.0;
+			if (count_F++ == 500) cp.F = 0.0;
 		}
 
-		public void UpdateCartInfo(int time, Vector x) {
-			time_stamp = time;
+		public void UpdateCartInfo(int count, Vector x) {
+			this.count = count;
+			time_stamp = ODESolver.dt * count;
 			this.x = x.Clone;
 			this.x[0] *= 1000;	//m->mm
 			this.x[1] *= 1000;	//m/s->mm/s
-			if (!ResetRequest) TurnOver = !CheckState();
+			if (!ResetRequest) CheckState(x);
 		}
 	}
 }

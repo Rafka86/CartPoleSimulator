@@ -58,7 +58,7 @@ namespace CartPoleSimulator {
 			cs.WaitClient();
 			cs.Start();
 
-			ODESolver.dt = 1e-3;
+			ODESolver.dt = 2e-4;
 			var t = 0;
 			while (cs.Repeat) {
 				t += 1;
@@ -68,6 +68,7 @@ namespace CartPoleSimulator {
 				cp.Init();
 				x = cp.x0;
 				cs.UpdateCartInfo(0, cp.x0);
+				cs.Reseted();
 				//var center = 0.0;
 
 				var count = 0;
@@ -75,10 +76,11 @@ namespace CartPoleSimulator {
 				while (!cs.TurnOver && !cs.ResetRequest) {
 					x = ODESolver.rk4Step(cp, 0.0, x);
 					cs.CartPoleUpdateF();
-					if (++count % 100 == 0) {
+					cs.CheckState(x);
+					if (++count % 500 == 0) {
 						cs.UpdateCartInfo(count, x);
-						//cs.SyncStart();	//get		//WFULL 同期用
-						//cs.SyncStart();	//mov,rst	//WFULL 同期用
+						//cs.SyncStart();	//get		//WF 同期用
+						//cs.SyncStart();	//mov,rst	//WF 同期用
 					}
 
 					var pos = new Vector2(x[0], 0.0);
@@ -93,7 +95,7 @@ namespace CartPoleSimulator {
 					}
 				}
 
-				//cs.SyncStart();	//同期用
+				//cs.SyncStart();	//WF 同期用
 				while (cs.TurnOver) ;
 
 				WriteLine((cs.Repeat) ? "Retry." : "Finish.");
