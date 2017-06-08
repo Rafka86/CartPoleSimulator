@@ -58,7 +58,7 @@ namespace CartPoleSimulator {
 			cs.WaitClient();
 			cs.Start();
 
-			ODESolver.dt = 2e-4;
+			ODESolver.dt = 1e-4;
 			var t = 0;
 			while (cs.Repeat) {
 				t += 1;
@@ -77,7 +77,7 @@ namespace CartPoleSimulator {
 					x = ODESolver.rk4Step(cp, 0.0, x);
 					cs.CartPoleUpdateF();
 					cs.CheckState(x);
-					if (++count % 500 == 0) {
+					if (++count % 1000 == 0) {
 						cs.UpdateCartInfo(count, x);
 						//cs.SyncStart();	//get		//WF 同期用
 						//cs.SyncStart();	//mov,rst	//WF 同期用

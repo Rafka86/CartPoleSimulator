@@ -271,14 +271,14 @@ namespace CartPoleSimulator {
 			reset = false;
 		}
 
-		const double lim_deg = 45.0 * PI / 180.0;
+		const double lim_deg = 15.0 * PI / 180.0;
 		const double lim_dst = 1000.0;						//mm
 		public void CheckState(Vector x) {
 			TurnOver = !(-lim_deg < x[2] && x[2] < lim_deg && -lim_dst < x[0] && x[0] < lim_dst);
 		}
 
 		public void CartPoleUpdateF() {
-			if (count_F++ == 500) cp.F = 0.0;
+			if (count_F++ == 1000) cp.F = 0.0;
 		}
 
 		public void UpdateCartInfo(int count, Vector x) {
